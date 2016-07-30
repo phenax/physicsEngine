@@ -18,6 +18,11 @@ export class PhysicsEngine {
         // The canvas dimensions
         this.dimen= config.dimen;
 
+        // True if you want to emulate gravity
+        this.gravity= config.gravity;
+
+        this.accGravity= 0.001;
+
         // List of CollisionObject
         this.objects= [];
 
@@ -55,6 +60,9 @@ export class PhysicsEngine {
             this.objects[i].position.y+= this.objects[i].velocity.y;
 
 
+            if(this.gravity)
+                this.objects[i].velocity.y+= this.accGravity;
+
             // Check for wall collisions
             this.objects[i].wallCollision(this.dimen);
         }
@@ -62,6 +70,7 @@ export class PhysicsEngine {
         // Check if objects are about to collide
         this.checkIfObjectsWillCollide();
     }
+
 
 
     /**
@@ -109,4 +118,6 @@ export class PhysicsEngine {
             }
         }
     }
+
+
 }

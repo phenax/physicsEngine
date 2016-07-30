@@ -38,10 +38,11 @@ var AwesomeGame = exports.AwesomeGame = function () {
         };
 
         this.engine = new _PhysicsEngine.PhysicsEngine({
-            dimen: this.dimen
+            dimen: this.dimen,
+            gravity: true
         });
 
-        this.createRandomObjects(10);
+        this.createRandomObjects(1);
     }
 
     /**
@@ -378,6 +379,11 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
         // The canvas dimensions
         this.dimen = config.dimen;
 
+        // True if you want to emulate gravity
+        this.gravity = config.gravity;
+
+        this.accGravity = 0.001;
+
         // List of CollisionObject
         this.objects = [];
 
@@ -421,6 +427,8 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                 // Change the position of the object
                 this.objects[i].position.x += this.objects[i].velocity.x;
                 this.objects[i].position.y += this.objects[i].velocity.y;
+
+                if (this.gravity) this.objects[i].velocity.y += this.accGravity;
 
                 // Check for wall collisions
                 this.objects[i].wallCollision(this.dimen);

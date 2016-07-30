@@ -24,11 +24,12 @@ export class AwesomeGame {
         };
 
         this.engine= new PhysicsEngine({
-            dimen: this.dimen
+            dimen: this.dimen,
+            gravity: true
         });
 
 
-        this.createRandomObjects(10);
+        this.createRandomObjects(1);
     }
 
 
