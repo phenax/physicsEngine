@@ -25,11 +25,12 @@ export class AwesomeGame {
 
         this.engine= new PhysicsEngine({
             dimen: this.dimen,
-            gravity: true
+            acceleration: { x: 0, y: 0 },
+            restitution: 1
         });
 
 
-        this.createRandomObjects(1);
+        this.createRandomObjects(2);
     }
 
 
@@ -39,17 +40,20 @@ export class AwesomeGame {
      * @param  {number} num  Number of objects to create
      */
     createRandomObjects(num) {
+
+        const randomNum= (min, max)=> ( Math.random()*(max - min) + min );
+
         for(let i= 0; i< num; i++) {
             this.engine.createObject({
                 name: 'wow',
-                size: 5,
+                size: 6,
                 startPosition: {
                     x: Math.random()*(this.canvas.width),
                     y: Math.random()*(this.canvas.height)
                 },
                 startVelocity: {
-                    x: Math.random() - 0.5,
-                    y: Math.random() - 0.5
+                    x: randomNum(-0.5, 0.5),
+                    y: randomNum(-0.5, 0.5)
                 }
             });
         }

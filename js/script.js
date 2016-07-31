@@ -39,10 +39,11 @@ var AwesomeGame = exports.AwesomeGame = function () {
 
         this.engine = new _PhysicsEngine.PhysicsEngine({
             dimen: this.dimen,
-            gravity: true
+            acceleration: { x: 0, y: 0 },
+            restitution: 1
         });
 
-        this.createRandomObjects(1);
+        this.createRandomObjects(2);
     }
 
     /**
@@ -55,17 +56,22 @@ var AwesomeGame = exports.AwesomeGame = function () {
     _createClass(AwesomeGame, [{
         key: 'createRandomObjects',
         value: function createRandomObjects(num) {
+
+            var randomNum = function randomNum(min, max) {
+                return Math.random() * (max - min) + min;
+            };
+
             for (var i = 0; i < num; i++) {
                 this.engine.createObject({
                     name: 'wow',
-                    size: 5,
+                    size: 6,
                     startPosition: {
                         x: Math.random() * this.canvas.width,
                         y: Math.random() * this.canvas.height
                     },
                     startVelocity: {
-                        x: Math.random() - 0.5,
-                        y: Math.random() - 0.5
+                        x: randomNum(-0.5, 0.5),
+                        y: randomNum(-0.5, 0.5)
                     }
                 });
             }
@@ -164,6 +170,7 @@ var CollisionObject = exports.CollisionObject = function () {
         // Position and velocity of the object
         this.position = config.startPosition || { x: 0, y: 0 };
         this.velocity = config.startVelocity || { x: 0, y: 0 };
+        this.acceleration = config.startAcc || { x: 0, y: 0 };
     }
 
     /**
@@ -321,7 +328,7 @@ var CollisionObject = exports.CollisionObject = function () {
 
     }, {
         key: "wallCollision",
-        value: function wallCollision(dimen) {
+        value: function wallCollision(dimen, restitution) {
             var upperBound = void 0,
                 // The upper bound condition
             lowerBound = void 0; // The lower bound condition
@@ -331,7 +338,7 @@ var CollisionObject = exports.CollisionObject = function () {
 
             // If either of them are crossed, invert the velocity
             if (upperBound || lowerBound) {
-                this.velocity.x *= -1;
+                this.velocity.x *= -(1 / restitution);
             }
 
             upperBound = this.position.y + this.size >= dimen.height;
@@ -339,7 +346,7 @@ var CollisionObject = exports.CollisionObject = function () {
 
             // What he said ^
             if (upperBound || lowerBound) {
-                this.velocity.y *= -1;
+                this.velocity.y *= -(1 / restitution);
             }
         }
     }]);
@@ -380,9 +387,10 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
         this.dimen = config.dimen;
 
         // True if you want to emulate gravity
-        this.gravity = config.gravity;
+        this.systemAcceleration = config.acceleration || { x: 0, y: 0 };
 
-        this.accGravity = 0.001;
+        // Coefficient of restitution
+        this.restitution = config.restitution || 1;
 
         // List of CollisionObject
         this.objects = [];
@@ -424,14 +432,20 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
             // Cycle through the objects
             for (var i = 0; i < this.objects.length; i++) {
 
-                // Change the position of the object
+                // Change the position of the object(Velocity)
                 this.objects[i].position.x += this.objects[i].velocity.x;
                 this.objects[i].position.y += this.objects[i].velocity.y;
 
-                if (this.gravity) this.objects[i].velocity.y += this.accGravity;
+                // Change in velocity(Acceleration of object + acceleration of the system)
+                this.objects[i].velocity.x += this.objects[i].acceleration.x + this.systemAcceleration.x;
+                this.objects[i].velocity.y += this.objects[i].acceleration.y + this.systemAcceleration.y;
+
+                // Enable Gravity
+                // if(this.gravity)
+                // this.objects[i].velocity.y+= this.accGravity;
 
                 // Check for wall collisions
-                this.objects[i].wallCollision(this.dimen);
+                this.objects[i].wallCollision(this.dimen, this.restitution);
             }
 
             // Check if objects are about to collide

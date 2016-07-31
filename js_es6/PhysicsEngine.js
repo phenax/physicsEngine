@@ -19,9 +19,10 @@ export class PhysicsEngine {
         this.dimen= config.dimen;
 
         // True if you want to emulate gravity
-        this.gravity= config.gravity;
+        this.systemAcceleration= config.acceleration || { x: 0, y: 0 };
 
-        this.accGravity= 0.001;
+        // Coefficient of restitution
+        this.restitution= config.restitution || 1;
 
         // List of CollisionObject
         this.objects= [];
@@ -55,16 +56,20 @@ export class PhysicsEngine {
         // Cycle through the objects
         for(let i= 0; i< this.objects.length; i++) {
 
-            // Change the position of the object
+            // Change the position of the object(Velocity)
             this.objects[i].position.x+= this.objects[i].velocity.x;
             this.objects[i].position.y+= this.objects[i].velocity.y;
 
+            // Change in velocity(Acceleration of object + acceleration of the system)
+            this.objects[i].velocity.x+= this.objects[i].acceleration.x + this.systemAcceleration.x;
+            this.objects[i].velocity.y+= this.objects[i].acceleration.y + this.systemAcceleration.y;
 
-            if(this.gravity)
-                this.objects[i].velocity.y+= this.accGravity;
+            // Enable Gravity
+            // if(this.gravity)
+                // this.objects[i].velocity.y+= this.accGravity;
 
             // Check for wall collisions
-            this.objects[i].wallCollision(this.dimen);
+            this.objects[i].wallCollision(this.dimen, this.restitution);
         }
 
         // Check if objects are about to collide
@@ -118,6 +123,4 @@ export class PhysicsEngine {
             }
         }
     }
-
-
 }

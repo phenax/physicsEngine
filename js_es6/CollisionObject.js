@@ -26,6 +26,7 @@ export class CollisionObject {
         // Position and velocity of the object
         this.position= config.startPosition || { x: 0, y: 0 };
         this.velocity= config.startVelocity || { x: 0, y: 0 };
+        this.acceleration= config.startAcc  || { x: 0, y: 0 };
     }
 
 
@@ -185,7 +186,7 @@ export class CollisionObject {
      *
      * @param  {Object}  dimen  The dimensions / boundaries
      */
-    wallCollision(dimen) {
+    wallCollision(dimen, restitution) {
         let upperBound,  // The upper bound condition
             lowerBound;  // The lower bound condition
 
@@ -194,7 +195,7 @@ export class CollisionObject {
 
         // If either of them are crossed, invert the velocity
         if(upperBound || lowerBound) {
-            this.velocity.x*= -1;
+            this.velocity.x*= -(1/restitution);
         }
 
         upperBound= (this.position.y + this.size >= dimen.height);
@@ -202,7 +203,7 @@ export class CollisionObject {
 
         // What he said ^
         if(upperBound || lowerBound) {
-            this.velocity.y*= -1;
+            this.velocity.y*= -(1/restitution);
         }
     }
 }
