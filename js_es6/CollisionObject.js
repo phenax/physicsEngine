@@ -23,10 +23,15 @@ export class CollisionObject {
         // Shape of the object
         this.shape= config.shape || CollisionObject.CIRCLE();                      // TODO: Add multiple objects
 
-        // Position and velocity of the object
-        this.position= config.startPosition || { x: 0, y: 0 };
-        this.velocity= config.startVelocity || { x: 0, y: 0 };
+        // Initial position, velocity and acceleration of the object
+        this.position= config.startPosition || { x: 0, y: 0 };                     // TODO: Add getters and setters for position,
+        this.velocity= config.startVelocity || { x: 0, y: 0 };                     //  velocity and acceleration
         this.acceleration= config.startAcc  || { x: 0, y: 0 };
+
+        // External acceleration(between two particles)
+        this.extAcceleration= { x: 0, y: 0 };
+
+        this.fieldStrength= config.fieldStrength || 0;
     }
 
 
@@ -143,8 +148,9 @@ export class CollisionObject {
 
         const k2= this.getVelocity()*Math.sin(angle1 - angleC);
 
-        k1= (this.size - collisionObject.size) * this.getVelocity();
-        k1*= Math.cos( angle1 - angleC );
+        k1= (this.size - collisionObject.size) *
+            this.getVelocity() *
+            Math.cos( angle1 - angleC )*1.1;
 
         k1+= 2*collisionObject.size *
             collisionObject.getVelocity() *
@@ -174,6 +180,7 @@ export class CollisionObject {
         // Calculate and store final velocity of the objects
         vel[0]= this.finalVelocity(collisionObject);
         vel[1]= collisionObject.finalVelocity(this);
+
 
         // Change object velocity
         this.velocity= vel[0];
@@ -205,5 +212,42 @@ export class CollisionObject {
         if(upperBound || lowerBound) {
             this.velocity.y*= -(1/restitution);
         }
+    }
+
+
+
+    calculateForceFieldsWith(collisionObject, surfaceDistance) {
+        let gConst;
+
+        if(surfaceDistance < 0)
+            return [ { x: 0, y: 0 }, { x: 0, y: 0 } ];
+
+        const distance= this.getDistanceFromObject(collisionObject);
+
+        gConst= this.fieldStrength * collisionObject.fieldStrength;
+        gConst/= (distance*distance);
+
+        const angC= this.getContactAngleWith(collisionObject);
+
+        const evSign= (d1, d2)=> (( d1 > d2 )? 1: -1);
+
+        const signs= [];
+        signs.push(evSign(this.position.x, collisionObject.position.x));
+        signs.push(evSign(this.position.y, collisionObject.position.y));
+
+        const acc1= gConst*this.size;
+        const acc2= -1*gConst*collisionObject.size;
+
+
+        return [
+            {
+                x: signs[0]*acc1*Math.cos(angC),
+                y: signs[1]*acc1*Math.sin(angC)
+            },
+            {
+                x: signs[0]*acc2*Math.cos(angC),
+                y: signs[1]*acc2*Math.sin(angC)
+            }
+        ];
     }
 }

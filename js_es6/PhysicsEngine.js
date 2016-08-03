@@ -60,9 +60,14 @@ export class PhysicsEngine {
             this.objects[i].position.x+= this.objects[i].velocity.x;
             this.objects[i].position.y+= this.objects[i].velocity.y;
 
-            // Change in velocity(Acceleration of object + acceleration of the system)
-            this.objects[i].velocity.x+= this.objects[i].acceleration.x + this.systemAcceleration.x;
-            this.objects[i].velocity.y+= this.objects[i].acceleration.y + this.systemAcceleration.y;
+            // Change in velocity(The net acceleration acting on the object)
+            this.objects[i].velocity.x+= this.objects[i].acceleration.x +
+                this.objects[i].extAcceleration.x +
+                this.systemAcceleration.x;
+
+            this.objects[i].velocity.y+= this.objects[i].acceleration.y +
+                this.objects[i].extAcceleration.y +
+                this.systemAcceleration.y;
 
             // Enable Gravity
             // if(this.gravity)
@@ -101,6 +106,7 @@ export class PhysicsEngine {
      */
     checkIfObjectsWillCollide() {
         let i, j, object, distance;
+        let forceFieldAcc;
 
         // Iterate through objects
         for(i= 1; i< this.objects.length; i++) {
@@ -114,9 +120,17 @@ export class PhysicsEngine {
                 // Distance between Object #1 and object at j index position
                 distance= object.getSurfaceDistanceFromObject(this.objects[j]);
 
+
                 // If they havent collided, dont collide
-                if(distance >= 0)
+                if(distance >= 0) {
+                    forceFieldAcc= object.calculateForceFieldsWith(this.objects[j], distance);
+
+                    object.extAcceleration= forceFieldAcc[0];
+                    this.objects[j].extAcceleration= forceFieldAcc[1];
+
                     continue;
+                }
+
 
                 // Collide Object #1 with object at `j`
                 object.collisionWith(this.objects[j]);

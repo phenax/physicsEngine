@@ -23,6 +23,7 @@ export class AwesomeGame {
             height: this.canvas.height
         };
 
+        // Create a new universe
         this.engine= new PhysicsEngine({
             dimen: this.dimen,
             acceleration: { x: 0, y: 0 },
@@ -30,6 +31,7 @@ export class AwesomeGame {
         });
 
 
+        // Introduce random collision objects in the system
         this.createRandomObjects(2);
     }
 
@@ -41,19 +43,23 @@ export class AwesomeGame {
      */
     createRandomObjects(num) {
 
+        // Generates random number between min to max
         const randomNum= (min, max)=> ( Math.random()*(max - min) + min );
 
         for(let i= 0; i< num; i++) {
+
+            // More objects
             this.engine.createObject({
-                name: 'wow',
-                size: 6,
+                name: 'O-'+1,
+                size: randomNum(8, 15),
+                fieldStrength: 3,
                 startPosition: {
-                    x: Math.random()*(this.canvas.width),
-                    y: Math.random()*(this.canvas.height)
+                    x: randomNum(6, this.canvas.width - 6),
+                    y: randomNum(6, this.canvas.height - 6)
                 },
                 startVelocity: {
-                    x: randomNum(-0.5, 0.5),
-                    y: randomNum(-0.5, 0.5)
+                    x: randomNum(-1, 1),
+                    y: randomNum(-1, 1)
                 }
             });
         }

@@ -37,12 +37,14 @@ var AwesomeGame = exports.AwesomeGame = function () {
             height: this.canvas.height
         };
 
+        // Create a new universe
         this.engine = new _PhysicsEngine.PhysicsEngine({
             dimen: this.dimen,
             acceleration: { x: 0, y: 0 },
             restitution: 1
         });
 
+        // Introduce random collision objects in the system
         this.createRandomObjects(2);
     }
 
@@ -57,21 +59,25 @@ var AwesomeGame = exports.AwesomeGame = function () {
         key: 'createRandomObjects',
         value: function createRandomObjects(num) {
 
+            // Generates random number between min to max
             var randomNum = function randomNum(min, max) {
                 return Math.random() * (max - min) + min;
             };
 
             for (var i = 0; i < num; i++) {
+
+                // More objects
                 this.engine.createObject({
-                    name: 'wow',
-                    size: 6,
+                    name: 'O-' + 1,
+                    size: randomNum(8, 15),
+                    fieldStrength: 3,
                     startPosition: {
-                        x: Math.random() * this.canvas.width,
-                        y: Math.random() * this.canvas.height
+                        x: randomNum(6, this.canvas.width - 6),
+                        y: randomNum(6, this.canvas.height - 6)
                     },
                     startVelocity: {
-                        x: randomNum(-0.5, 0.5),
-                        y: randomNum(-0.5, 0.5)
+                        x: randomNum(-1, 1),
+                        y: randomNum(-1, 1)
                     }
                 });
             }
@@ -167,10 +173,15 @@ var CollisionObject = exports.CollisionObject = function () {
         // Shape of the object
         this.shape = config.shape || CollisionObject.CIRCLE(); // TODO: Add multiple objects
 
-        // Position and velocity of the object
-        this.position = config.startPosition || { x: 0, y: 0 };
-        this.velocity = config.startVelocity || { x: 0, y: 0 };
+        // Initial position, velocity and acceleration of the object
+        this.position = config.startPosition || { x: 0, y: 0 }; // TODO: Add getters and setters for position,
+        this.velocity = config.startVelocity || { x: 0, y: 0 }; //  velocity and acceleration
         this.acceleration = config.startAcc || { x: 0, y: 0 };
+
+        // External acceleration(between two particles)
+        this.extAcceleration = { x: 0, y: 0 };
+
+        this.fieldStrength = config.fieldStrength || 0;
     }
 
     /**
@@ -284,8 +295,7 @@ var CollisionObject = exports.CollisionObject = function () {
 
             var k2 = this.getVelocity() * Math.sin(angle1 - angleC);
 
-            k1 = (this.size - collisionObject.size) * this.getVelocity();
-            k1 *= Math.cos(angle1 - angleC);
+            k1 = (this.size - collisionObject.size) * this.getVelocity() * Math.cos(angle1 - angleC) * 1.1;
 
             k1 += 2 * collisionObject.size * collisionObject.getVelocity() * Math.cos(angle2 - angleC);
 
@@ -348,6 +358,39 @@ var CollisionObject = exports.CollisionObject = function () {
             if (upperBound || lowerBound) {
                 this.velocity.y *= -(1 / restitution);
             }
+        }
+    }, {
+        key: "calculateForceFieldsWith",
+        value: function calculateForceFieldsWith(collisionObject, surfaceDistance) {
+            var gConst = void 0;
+
+            if (surfaceDistance < 0) return [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+
+            var distance = this.getDistanceFromObject(collisionObject);
+
+            gConst = this.fieldStrength * collisionObject.fieldStrength;
+            gConst /= distance * distance;
+
+            var angC = this.getContactAngleWith(collisionObject);
+
+            var evSign = function evSign(d1, d2) {
+                return d1 > d2 ? 1 : -1;
+            };
+
+            var signs = [];
+            signs.push(evSign(this.position.x, collisionObject.position.x));
+            signs.push(evSign(this.position.y, collisionObject.position.y));
+
+            var acc1 = gConst * this.size;
+            var acc2 = -1 * gConst * collisionObject.size;
+
+            return [{
+                x: signs[0] * acc1 * Math.cos(angC),
+                y: signs[1] * acc1 * Math.sin(angC)
+            }, {
+                x: signs[0] * acc2 * Math.cos(angC),
+                y: signs[1] * acc2 * Math.sin(angC)
+            }];
         }
     }]);
 
@@ -436,9 +479,10 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                 this.objects[i].position.x += this.objects[i].velocity.x;
                 this.objects[i].position.y += this.objects[i].velocity.y;
 
-                // Change in velocity(Acceleration of object + acceleration of the system)
-                this.objects[i].velocity.x += this.objects[i].acceleration.x + this.systemAcceleration.x;
-                this.objects[i].velocity.y += this.objects[i].acceleration.y + this.systemAcceleration.y;
+                // Change in velocity(The net acceleration acting on the object)
+                this.objects[i].velocity.x += this.objects[i].acceleration.x + this.objects[i].extAcceleration.x + this.systemAcceleration.x;
+
+                this.objects[i].velocity.y += this.objects[i].acceleration.y + this.objects[i].extAcceleration.y + this.systemAcceleration.y;
 
                 // Enable Gravity
                 // if(this.gravity)
@@ -483,6 +527,7 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                 j = void 0,
                 object = void 0,
                 distance = void 0;
+            var forceFieldAcc = void 0;
 
             // Iterate through objects
             for (i = 1; i < this.objects.length; i++) {
@@ -497,7 +542,14 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                     distance = object.getSurfaceDistanceFromObject(this.objects[j]);
 
                     // If they havent collided, dont collide
-                    if (distance >= 0) continue;
+                    if (distance >= 0) {
+                        forceFieldAcc = object.calculateForceFieldsWith(this.objects[j], distance);
+
+                        object.extAcceleration = forceFieldAcc[0];
+                        this.objects[j].extAcceleration = forceFieldAcc[1];
+
+                        continue;
+                    }
 
                     // Collide Object #1 with object at `j`
                     object.collisionWith(this.objects[j]);
@@ -515,6 +567,9 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
 var _AwesomeGame = require('./AwesomeGame');
 
 var canvas = document.getElementById('game');
+
+canvas.width = 400;
+canvas.height = 400;
 
 var game = new _AwesomeGame.AwesomeGame({
     canvas: canvas
