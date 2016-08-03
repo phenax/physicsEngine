@@ -15,10 +15,26 @@ var _CollisionObject = require('./CollisionObject');
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
+ * Methods to debug objects from console
+ */
+function debugObjectMethods(objects) {
+    window.moveStuff = function () {
+        for (var i = 0; i < objects.length; i++) {
+            objects[i].teleport(arguments[2 * i], arguments[2 * i + 1]).stop();
+        }
+    };
+
+    window.moveObject = function (i, x1, y1) {
+        objects[i].teleport(x1, y1).stop();
+    };
+}
+
+/**
  * A really awesome game (The author doesnt know what this is yet)
  *
  * @author Akshay Nair<phenax5@gmail.com>
  */
+
 var AwesomeGame = exports.AwesomeGame = function () {
 
     /**
@@ -58,19 +74,24 @@ var AwesomeGame = exports.AwesomeGame = function () {
     _createClass(AwesomeGame, [{
         key: 'createRandomObjects',
         value: function createRandomObjects(num) {
+            var cObject = [];
 
             // Generates random number between min to max
             var randomNum = function randomNum(min, max) {
                 return Math.random() * (max - min) + min;
             };
 
+            var randomVal = function randomVal(arr) {
+                return arr[Math.floor(randomNum(0, arr.length))];
+            };
+
             for (var i = 0; i < num; i++) {
 
                 // More objects
-                this.engine.createObject({
+                cObject.push(this.engine.createObject({
                     name: 'O-' + 1,
                     size: randomNum(8, 15),
-                    fieldStrength: 3,
+                    fieldStrength: randomVal([3, -3]), // randomNum(-3, 3),
                     startPosition: {
                         x: randomNum(6, this.canvas.width - 6),
                         y: randomNum(6, this.canvas.height - 6)
@@ -79,8 +100,10 @@ var AwesomeGame = exports.AwesomeGame = function () {
                         x: randomNum(-1, 1),
                         y: randomNum(-1, 1)
                     }
-                });
+                }));
             }
+
+            debugObjectMethods(cObject);
         }
 
         /**
@@ -359,30 +382,52 @@ var CollisionObject = exports.CollisionObject = function () {
                 this.velocity.y *= -(1 / restitution);
             }
         }
+
+        /**
+         * Calculates the acceleration between two collision objects(particles)
+         * due to the mutual interactions
+         *
+         * @param  {CollisionObject}  collisionObject   Second force field source
+         * @param  {Number}           constant          Alter the force field
+         *                                              -ve to change direction
+         *
+         * @return {List}                               List of acceleration of the
+         *                                              two objects
+         */
+
     }, {
         key: "calculateForceFieldsWith",
-        value: function calculateForceFieldsWith(collisionObject, surfaceDistance) {
-            var gConst = void 0;
+        value: function calculateForceFieldsWith(collisionObject, constant) {
 
-            if (surfaceDistance < 0) return [{ x: 0, y: 0 }, { x: 0, y: 0 }];
+            // By default, repulsion
+            constant = constant || 1;
 
-            var distance = this.getDistanceFromObject(collisionObject);
-
-            gConst = this.fieldStrength * collisionObject.fieldStrength;
-            gConst /= distance * distance;
-
-            var angC = this.getContactAngleWith(collisionObject);
-
+            // Compares two numbers
             var evSign = function evSign(d1, d2) {
                 return d1 > d2 ? 1 : -1;
             };
 
+            // Center-to-center distance
+            var distance = this.getDistanceFromObject(collisionObject);
+
+            var gConst = this.fieldStrength * collisionObject.fieldStrength;
+
+            // Tweak the value of force field strength
+            gConst *= constant;
+
+            // inversly proportional to distance-squared
+            gConst /= distance * distance;
+
+            // Angle of contact(Angle made by the center)
+            var angC = Math.abs(this.getContactAngleWith(collisionObject));
+
+            // The direction of motion of the
             var signs = [];
             signs.push(evSign(this.position.x, collisionObject.position.x));
             signs.push(evSign(this.position.y, collisionObject.position.y));
 
             var acc1 = gConst * this.size;
-            var acc2 = -1 * gConst * collisionObject.size;
+            var acc2 = -gConst * collisionObject.size;
 
             return [{
                 x: signs[0] * acc1 * Math.cos(angC),
@@ -391,6 +436,34 @@ var CollisionObject = exports.CollisionObject = function () {
                 x: signs[0] * acc2 * Math.cos(angC),
                 y: signs[1] * acc2 * Math.sin(angC)
             }];
+        }
+
+        /**
+         * Teleports the object to a new position
+         *
+         * @param  {Number} x The X coordinate of the new position
+         * @param  {Number} y The Y coordinate of the new position
+         */
+
+    }, {
+        key: "teleport",
+        value: function teleport(x, y) {
+            this.position = { x: x, y: y };
+
+            return this;
+        }
+
+        /**
+         * Stop the object in motion i.e. acceleration and velocity become 0
+         */
+
+    }, {
+        key: "stop",
+        value: function stop() {
+            this.velocity = { x: 0, y: 0 };
+            this.acceleration = { x: 0, y: 0 };
+
+            return this;
         }
     }]);
 
@@ -527,7 +600,6 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                 j = void 0,
                 object = void 0,
                 distance = void 0;
-            var forceFieldAcc = void 0;
 
             // Iterate through objects
             for (i = 1; i < this.objects.length; i++) {
@@ -543,10 +615,9 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
 
                     // If they havent collided, dont collide
                     if (distance >= 0) {
-                        forceFieldAcc = object.calculateForceFieldsWith(this.objects[j], distance);
 
-                        object.extAcceleration = forceFieldAcc[0];
-                        this.objects[j].extAcceleration = forceFieldAcc[1];
+                        // Evaluate external acceleration
+                        this.evaluateExternalAcceleration(object, this.objects[j]);
 
                         continue;
                     }
@@ -555,6 +626,25 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
                     object.collisionWith(this.objects[j]);
                 }
             }
+        }
+
+        /**
+         * Evaluates all types of external acceleration applied
+         *
+         * @param  {CollisionObject} object1   A collision object
+         * @param  {CollisionObject} object2   A collision object
+         */
+
+    }, {
+        key: 'evaluateExternalAcceleration',
+        value: function evaluateExternalAcceleration(object1, object2) {
+
+            // Calculate the acceleration due to the force fields
+            var forceFieldAcc = object1.calculateForceFieldsWith(object2);
+
+            // Apply external accelerations
+            object1.extAcceleration = forceFieldAcc[0];
+            object2.extAcceleration = forceFieldAcc[1];
         }
     }]);
 

@@ -2,6 +2,24 @@
 import { PhysicsEngine } from './PhysicsEngine';
 import { CollisionObject } from './CollisionObject';
 
+
+/**
+ * Methods to debug objects from console
+ */
+function debugObjectMethods(objects) {
+    window.moveStuff= function() {
+        for(let i= 0; i< objects.length; i++) {
+            objects[i].teleport(arguments[2*i], arguments[2*i + 1]).stop();
+        }
+    };
+
+    window.moveObject= function(i, x1, y1) {
+        objects[i].teleport(x1, y1).stop();
+    };
+}
+
+
+
 /**
  * A really awesome game (The author doesnt know what this is yet)
  *
@@ -42,17 +60,20 @@ export class AwesomeGame {
      * @param  {number} num  Number of objects to create
      */
     createRandomObjects(num) {
+        let cObject= [];
 
         // Generates random number between min to max
         const randomNum= (min, max)=> ( Math.random()*(max - min) + min );
 
+        const randomVal= (arr)=> ( arr[Math.floor(randomNum(0, arr.length))] );
+
         for(let i= 0; i< num; i++) {
 
             // More objects
-            this.engine.createObject({
+            cObject.push(this.engine.createObject({
                 name: 'O-'+1,
                 size: randomNum(8, 15),
-                fieldStrength: 3,
+                fieldStrength: randomVal([ 3, -3 ]), // randomNum(-3, 3),
                 startPosition: {
                     x: randomNum(6, this.canvas.width - 6),
                     y: randomNum(6, this.canvas.height - 6)
@@ -61,8 +82,10 @@ export class AwesomeGame {
                     x: randomNum(-1, 1),
                     y: randomNum(-1, 1)
                 }
-            });
+            }));
         }
+
+        debugObjectMethods(cObject);
     }
 
 

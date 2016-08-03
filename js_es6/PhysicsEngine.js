@@ -106,7 +106,6 @@ export class PhysicsEngine {
      */
     checkIfObjectsWillCollide() {
         let i, j, object, distance;
-        let forceFieldAcc;
 
         // Iterate through objects
         for(i= 1; i< this.objects.length; i++) {
@@ -123,10 +122,9 @@ export class PhysicsEngine {
 
                 // If they havent collided, dont collide
                 if(distance >= 0) {
-                    forceFieldAcc= object.calculateForceFieldsWith(this.objects[j], distance);
 
-                    object.extAcceleration= forceFieldAcc[0];
-                    this.objects[j].extAcceleration= forceFieldAcc[1];
+                    // Evaluate external acceleration
+                    this.evaluateExternalAcceleration(object, this.objects[j]);
 
                     continue;
                 }
@@ -136,5 +134,22 @@ export class PhysicsEngine {
                 object.collisionWith(this.objects[j]);
             }
         }
+    }
+
+
+    /**
+     * Evaluates all types of external acceleration applied
+     *
+     * @param  {CollisionObject} object1   A collision object
+     * @param  {CollisionObject} object2   A collision object
+     */
+    evaluateExternalAcceleration(object1, object2) {
+
+        // Calculate the acceleration due to the force fields
+        let forceFieldAcc= object1.calculateForceFieldsWith(object2);
+
+        // Apply external accelerations
+        object1.extAcceleration= forceFieldAcc[0];
+        object2.extAcceleration= forceFieldAcc[1];
     }
 }

@@ -215,28 +215,48 @@ export class CollisionObject {
     }
 
 
+    /**
+     * Calculates the acceleration between two collision objects(particles)
+     * due to the mutual interactions
+     *
+     * @param  {CollisionObject}  collisionObject   Second force field source
+     * @param  {Number}           constant          Alter the force field
+     *                                              -ve to change direction
+     *
+     * @return {List}                               List of acceleration of the
+     *                                              two objects
+     */
+    calculateForceFieldsWith(collisionObject, constant) {
 
-    calculateForceFieldsWith(collisionObject, surfaceDistance) {
-        let gConst;
+        // By default, repulsion
+        constant= constant || 1;
 
-        if(surfaceDistance < 0)
-            return [ { x: 0, y: 0 }, { x: 0, y: 0 } ];
-
-        const distance= this.getDistanceFromObject(collisionObject);
-
-        gConst= this.fieldStrength * collisionObject.fieldStrength;
-        gConst/= (distance*distance);
-
-        const angC= this.getContactAngleWith(collisionObject);
-
+        // Compares two numbers
         const evSign= (d1, d2)=> (( d1 > d2 )? 1: -1);
 
-        const signs= [];
+        // Center-to-center distance
+        const distance= this.getDistanceFromObject(collisionObject);
+
+
+        let gConst= this.fieldStrength * collisionObject.fieldStrength;
+
+        // Tweak the value of force field strength
+        gConst*= constant;
+
+        // inversly proportional to distance-squared
+        gConst/= (distance*distance);
+
+
+        // Angle of contact(Angle made by the center)
+        const angC= Math.abs(this.getContactAngleWith(collisionObject));
+
+        // The direction of motion of the
+        const signs= [ ];
         signs.push(evSign(this.position.x, collisionObject.position.x));
         signs.push(evSign(this.position.y, collisionObject.position.y));
 
         const acc1= gConst*this.size;
-        const acc2= -1*gConst*collisionObject.size;
+        const acc2= -gConst*collisionObject.size;
 
 
         return [
@@ -249,5 +269,29 @@ export class CollisionObject {
                 y: signs[1]*acc2*Math.sin(angC)
             }
         ];
+    }
+
+
+    /**
+     * Teleports the object to a new position
+     *
+     * @param  {Number} x The X coordinate of the new position
+     * @param  {Number} y The Y coordinate of the new position
+     */
+    teleport(x, y) {
+        this.position= { x, y };
+
+        return this;
+    }
+
+
+    /**
+     * Stop the object in motion i.e. acceleration and velocity become 0
+     */
+    stop() {
+        this.velocity= { x: 0, y: 0 };
+        this.acceleration= { x: 0, y: 0 };
+
+        return this;
     }
 }
