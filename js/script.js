@@ -43,6 +43,8 @@ var AwesomeGame = exports.AwesomeGame = function () {
      * @param  {Object} config  Create an awesome game
      */
     function AwesomeGame(config) {
+        var _this = this;
+
         _classCallCheck(this, AwesomeGame);
 
         this.canvas = config.canvas;
@@ -61,7 +63,11 @@ var AwesomeGame = exports.AwesomeGame = function () {
         });
 
         // Introduce random collision objects in the system
-        this.createRandomObjects(2);
+        this.createRandomObjects(1);
+
+        window.explode = function () {
+            _this.engine.explode(0, [1, 1], 4);
+        };
     }
 
     /**
@@ -91,7 +97,7 @@ var AwesomeGame = exports.AwesomeGame = function () {
                 cObject.push(this.engine.createObject({
                     name: 'O-' + 1,
                     size: randomNum(8, 15),
-                    fieldStrength: randomVal([3, -3]), // randomNum(-3, 3),
+                    // fieldStrength: randomVal([ 3, -3 ]), // randomNum(-3, 3),
                     startPosition: {
                         x: randomNum(6, this.canvas.width - 6),
                         y: randomNum(6, this.canvas.height - 6)
@@ -126,7 +132,7 @@ var AwesomeGame = exports.AwesomeGame = function () {
         value: function drawGame() {
 
             // Ball colors
-            this.ctx.fillStyle = "#444444";
+            this.ctx.fillStyle = "#51e980";
 
             // Clear the canvas
             this.ctx.clearRect(0, 0, this.dimen.width, this.dimen.height);
@@ -188,17 +194,17 @@ var CollisionObject = exports.CollisionObject = function () {
     function CollisionObject(config) {
         _classCallCheck(this, CollisionObject);
 
-        this.name = name;
+        this.name = name || "obj";
 
         // Object size
-        this.size = config.size;
+        this.size = config.size || 4;
 
         // Shape of the object
-        this.shape = config.shape || CollisionObject.CIRCLE(); // TODO: Add multiple objects
+        this.shape = config.shape || CollisionObject.CIRCLE(); // TODO: Add more object shapes
 
         // Initial position, velocity and acceleration of the object
         this.position = config.startPosition || { x: 0, y: 0 }; // TODO: Add getters and setters for position,
-        this.velocity = config.startVelocity || { x: 0, y: 0 }; //  velocity and acceleration
+        this.velocity = config.startVelocity || { x: 0, y: 0 }; //  velocity and acceleration (maybe)
         this.acceleration = config.startAcc || { x: 0, y: 0 };
 
         // External acceleration(between two particles)
@@ -307,22 +313,24 @@ var CollisionObject = exports.CollisionObject = function () {
         value: function finalVelocity(collisionObject) {
             var k1 = void 0;
 
-            // Angle velocity of object 1
+            // Their angle of motion
             var angle1 = this.getAngle();
-
-            // Angle velocity of object 2
             var angle2 = collisionObject.getAngle();
 
             // The contact angle of object 1 and 2
-            var angleC = this.getContactAngleWith(collisionObject);
+            var angleC = Math.abs(this.getContactAngleWith(collisionObject));
+
+            // Their masses
+            var mass1 = this.getArea();
+            var mass2 = collisionObject.getArea();
 
             var k2 = this.getVelocity() * Math.sin(angle1 - angleC);
 
-            k1 = (this.size - collisionObject.size) * this.getVelocity() * Math.cos(angle1 - angleC) * 1.1;
+            k1 = (mass1 - mass2) * this.getVelocity() * Math.cos(angle1 - angleC);
 
-            k1 += 2 * collisionObject.size * collisionObject.getVelocity() * Math.cos(angle2 - angleC);
+            k1 += 2 * mass2 * collisionObject.getVelocity() * Math.cos(angle2 - angleC);
 
-            k1 /= this.size + collisionObject.size;
+            k1 /= mass1 + mass2;
 
             // Velocity of the object after collision
             var velocity = {
@@ -465,6 +473,36 @@ var CollisionObject = exports.CollisionObject = function () {
 
             return this;
         }
+
+        /**
+         * Find area of the object
+         *
+         * @return {Number}  The area of the object
+         */
+
+    }, {
+        key: "getArea",
+        value: function getArea() {
+
+            // Only a circle for now
+            return Math.PI * this.size * this.size;
+        }
+
+        /**
+         * Find the dimension(s) of the object
+         *
+         * @param  {Number} area The area of the object
+         *
+         * @return {Number}      The dimension of the object
+         */
+
+    }, {
+        key: "getDimenFromArea",
+        value: function getDimenFromArea(area) {
+
+            // Only for a circle
+            return Math.sqrt(area / Math.PI);
+        }
     }]);
 
     return CollisionObject;
@@ -478,17 +516,16 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.PhysicsEngine = undefined;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     * Engine for handling object physics
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     * @author Akshay Nair<phenax5@gmail.com>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _CollisionObject = require('./CollisionObject');
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/**
- * Engine for handling object physics
- *
- * @author Akshay Nair<phenax5@gmail.com>
- */
 var PhysicsEngine = exports.PhysicsEngine = function () {
 
     /**
@@ -557,10 +594,6 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
 
                 this.objects[i].velocity.y += this.objects[i].acceleration.y + this.objects[i].extAcceleration.y + this.systemAcceleration.y;
 
-                // Enable Gravity
-                // if(this.gravity)
-                // this.objects[i].velocity.y+= this.accGravity;
-
                 // Check for wall collisions
                 this.objects[i].wallCollision(this.dimen, this.restitution);
             }
@@ -586,6 +619,22 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
             this.objects.push(object);
 
             return object;
+        }
+
+        /**
+         * Creates N number of objects
+         *
+         * @param  {Number}   numberOfObjects  Number of collison objects added
+         * @param  {Function} callback         The callback function to fetch the
+         *                                     required configuration(params: index)
+         */
+
+    }, {
+        key: 'createNObjects',
+        value: function createNObjects(numberOfObjects, callback) {
+            for (var i = 0; i < numberOfObjects; i++) {
+                this.createObject(callback(i));
+            }
         }
 
         /**
@@ -645,6 +694,109 @@ var PhysicsEngine = exports.PhysicsEngine = function () {
             // Apply external accelerations
             object1.extAcceleration = forceFieldAcc[0];
             object2.extAcceleration = forceFieldAcc[1];
+        }
+
+        /**
+         * Destroy a collision object from this universe
+         *
+         * @param  {Number} index  The index position of the object being removed
+         */
+
+    }, {
+        key: 'annihilate',
+        value: function annihilate(index) {
+            this.objects.splice(index, 1);
+        }
+
+        /**
+         * Calculate the velocity of the exploded particles
+         *
+         * @param  {CollisionObject} collisionObject The particle to explode
+         * @param  {Number}          radius          The radius of the particle
+         * @param  {Number}          explosionFactor The energy involved in the
+         *                                           explosion
+         *
+         * @return {Object}                          The list of velocity of the
+         *                                           particles created after the
+         *                                           explosion
+         */
+
+    }, {
+        key: 'calculateExplosionVelocity',
+        value: function calculateExplosionVelocity(collisionObject, radius, explosionFactor) {
+
+            // The angle of projection of the first exploded particle
+            var angle = Math.PI / 2 + collisionObject.getAngle();
+
+            // Coordinates
+            var x = -Math.cos(angle) * explosionFactor / radius[0];
+            var y = -Math.sin(angle) * explosionFactor / radius[0];
+
+            return [{ x: x, y: y }, { x: -x, y: -y }];
+        }
+
+        /**
+         * Explodes a collision object
+         *
+         * @param  {Number} index           The index position of the element to
+         *                                  explode
+         * @param  {List}   parts           Ratio to explode the particles
+         *                                  Eg - [ 3, 2, 1 ] = Ratio 3:2:1
+         * @param  {Number} explosionFactor The energy involved in the explosion
+         */
+
+    }, {
+        key: 'explode',
+        value: function explode(index, parts, explosionFactor) {
+
+            // Only two partitions for now
+            if (parts.length != 2) return;
+
+            // The object exploding
+            var object = this.objects[index];
+
+            // The sum of the partitions
+            var sum = parts.reduce(function (total, val) {
+                return total + val;
+            }, 0);
+
+            // The list of radius of particles(the partitions)
+            var radius = parts.map(function (val) {
+                return object.getDimenFromArea(object.getArea() * val / sum);
+            });
+
+            // The velocity of the new particles
+            var startVelocity = this.calculateExplosionVelocity(object, radius, explosionFactor);
+
+            // The inital position constants
+            var positionConst = {
+                x: object.size * Math.cos(90 + object.getAngle()),
+                y: object.size * Math.sin(90 + object.getAngle())
+            };
+
+            // Get the position of the i-th partition
+            var getStartPosition = function getStartPosition(i) {
+                return {
+                    x: Math.pow(-1, i + 1) * positionConst.x + object.position.x,
+                    y: Math.pow(-1, i + 1) * positionConst.y + object.position.y
+                };
+            };
+
+            // Create all the partitions and introduce them to this universe
+            this.createNObjects(radius.length, function (i) {
+                return {
+                    size: radius[i],
+                    name: 'O-wow',
+                    startPosition: getStartPosition(i),
+                    startVelocity: {
+                        x: startVelocity[i].x + object.velocity.x,
+                        y: startVelocity[i].y + object.velocity.y
+                    }
+                };
+            });
+
+            // Destroy the initial particle from existence
+            this.annihilate(index);
         }
     }]);
 

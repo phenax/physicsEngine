@@ -5,8 +5,11 @@
  */
 export class CollisionObject {
 
+
     // Static function as constant due to lack of static variables
     static CIRCLE() { return 1; }
+
+
 
 
     /**
@@ -15,17 +18,17 @@ export class CollisionObject {
      * @param  {Object} config  The collision object configuration
      */
     constructor(config) {
-        this.name= name;
+        this.name= name || "obj";
 
         // Object size
-        this.size= config.size;
+        this.size= config.size || 4;
 
         // Shape of the object
-        this.shape= config.shape || CollisionObject.CIRCLE();                      // TODO: Add multiple objects
+        this.shape= config.shape || CollisionObject.CIRCLE();                      // TODO: Add more object shapes
 
         // Initial position, velocity and acceleration of the object
         this.position= config.startPosition || { x: 0, y: 0 };                     // TODO: Add getters and setters for position,
-        this.velocity= config.startVelocity || { x: 0, y: 0 };                     //  velocity and acceleration
+        this.velocity= config.startVelocity || { x: 0, y: 0 };                     //  velocity and acceleration (maybe)
         this.acceleration= config.startAcc  || { x: 0, y: 0 };
 
         // External acceleration(between two particles)
@@ -33,6 +36,13 @@ export class CollisionObject {
 
         this.fieldStrength= config.fieldStrength || 0;
     }
+
+
+
+
+
+
+
 
 
     /**
@@ -74,6 +84,12 @@ export class CollisionObject {
     }
 
 
+
+
+
+
+
+
     /**
      * Gets the angle of motion of the collision object
      *
@@ -111,6 +127,11 @@ export class CollisionObject {
     }
 
 
+
+
+
+
+
     /**
      * The netvelocity of the object
      *
@@ -126,6 +147,12 @@ export class CollisionObject {
     }
 
 
+
+
+
+
+
+
     /**
      * Finds the velocity of this when its collided with collisionObject
      *
@@ -136,27 +163,26 @@ export class CollisionObject {
     finalVelocity(collisionObject) {
         let k1;
 
-        // Angle velocity of object 1
+        // Their angle of motion
         const angle1= this.getAngle();
-
-        // Angle velocity of object 2
         const angle2= collisionObject.getAngle();
 
         // The contact angle of object 1 and 2
-        const angleC= this.getContactAngleWith(collisionObject);
+        const angleC= Math.abs(this.getContactAngleWith(collisionObject));
 
+        // Their masses
+        const mass1= this.getArea();
+        const mass2= collisionObject.getArea();
 
         const k2= this.getVelocity()*Math.sin(angle1 - angleC);
 
-        k1= (this.size - collisionObject.size) *
-            this.getVelocity() *
-            Math.cos( angle1 - angleC )*1.1;
+        k1= (mass1 - mass2) * this.getVelocity() *
+            Math.cos( angle1 - angleC );
 
-        k1+= 2*collisionObject.size *
-            collisionObject.getVelocity() *
+        k1+= 2*mass2 * collisionObject.getVelocity() *
             Math.cos( angle2 - angleC );
 
-        k1/= (this.size + collisionObject.size);
+        k1/= (mass1 + mass2);
 
 
         // Velocity of the object after collision
@@ -167,6 +193,7 @@ export class CollisionObject {
 
         return velocity;
     }
+
 
 
     /**
@@ -186,6 +213,7 @@ export class CollisionObject {
         this.velocity= vel[0];
         collisionObject.velocity= vel[1];
     }
+
 
 
     /**
@@ -213,6 +241,11 @@ export class CollisionObject {
             this.velocity.y*= -(1/restitution);
         }
     }
+
+
+
+
+
 
 
     /**
@@ -272,6 +305,12 @@ export class CollisionObject {
     }
 
 
+
+
+
+
+
+
     /**
      * Teleports the object to a new position
      *
@@ -285,6 +324,8 @@ export class CollisionObject {
     }
 
 
+
+
     /**
      * Stop the object in motion i.e. acceleration and velocity become 0
      */
@@ -293,5 +334,34 @@ export class CollisionObject {
         this.acceleration= { x: 0, y: 0 };
 
         return this;
+    }
+
+
+
+
+
+
+    /**
+     * Find area of the object
+     *
+     * @return {Number}  The area of the object
+     */
+    getArea() {
+
+        // Only a circle for now
+        return Math.PI*this.size*this.size;
+    }
+
+    /**
+     * Find the dimension(s) of the object
+     *
+     * @param  {Number} area The area of the object
+     *
+     * @return {Number}      The dimension of the object
+     */
+    getDimenFromArea(area) {
+
+        // Only for a circle
+        return Math.sqrt(area/Math.PI);
     }
 }

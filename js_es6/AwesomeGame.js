@@ -50,7 +50,11 @@ export class AwesomeGame {
 
 
         // Introduce random collision objects in the system
-        this.createRandomObjects(2);
+        this.createRandomObjects(1);
+
+        window.explode= ()=> {
+            this.engine.explode(0, [ 1, 1 ], 4);
+        };
     }
 
 
@@ -73,7 +77,7 @@ export class AwesomeGame {
             cObject.push(this.engine.createObject({
                 name: 'O-'+1,
                 size: randomNum(8, 15),
-                fieldStrength: randomVal([ 3, -3 ]), // randomNum(-3, 3),
+                // fieldStrength: randomVal([ 3, -3 ]), // randomNum(-3, 3),
                 startPosition: {
                     x: randomNum(6, this.canvas.width - 6),
                     y: randomNum(6, this.canvas.height - 6)
@@ -104,7 +108,7 @@ export class AwesomeGame {
     drawGame() {
 
         // Ball colors
-        this.ctx.fillStyle= "#444444";
+        this.ctx.fillStyle= "#51e980";
 
         // Clear the canvas
         this.ctx.clearRect(0, 0, this.dimen.width, this.dimen.height);

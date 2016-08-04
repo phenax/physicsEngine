@@ -1,10 +1,14 @@
+/**
+* Engine for handling object physics
+*
+* @author Akshay Nair<phenax5@gmail.com>
+*/
+
+
 import { CollisionObject } from './CollisionObject';
 
-/**
- * Engine for handling object physics
- *
- * @author Akshay Nair<phenax5@gmail.com>
- */
+
+
 export class PhysicsEngine {
 
 
@@ -30,6 +34,11 @@ export class PhysicsEngine {
         // Starts looping frames in a new thread
         this.iterateFrames();
     }
+
+
+
+
+
 
 
     /**
@@ -69,9 +78,6 @@ export class PhysicsEngine {
                 this.objects[i].extAcceleration.y +
                 this.systemAcceleration.y;
 
-            // Enable Gravity
-            // if(this.gravity)
-                // this.objects[i].velocity.y+= this.accGravity;
 
             // Check for wall collisions
             this.objects[i].wallCollision(this.dimen, this.restitution);
@@ -80,6 +86,10 @@ export class PhysicsEngine {
         // Check if objects are about to collide
         this.checkIfObjectsWillCollide();
     }
+
+
+
+
 
 
 
@@ -98,6 +108,24 @@ export class PhysicsEngine {
 
         return object;
     }
+
+
+    /**
+     * Creates N number of objects
+     *
+     * @param  {Number}   numberOfObjects  Number of collison objects added
+     * @param  {Function} callback         The callback function to fetch the
+     *                                     required configuration(params: index)
+     */
+    createNObjects(numberOfObjects, callback) {
+        for(let i= 0; i< numberOfObjects; i++)
+        this.createObject(callback(i));
+    }
+
+
+
+
+
 
 
     /**
@@ -137,6 +165,11 @@ export class PhysicsEngine {
     }
 
 
+
+
+
+
+
     /**
      * Evaluates all types of external acceleration applied
      *
@@ -151,5 +184,123 @@ export class PhysicsEngine {
         // Apply external accelerations
         object1.extAcceleration= forceFieldAcc[0];
         object2.extAcceleration= forceFieldAcc[1];
+    }
+
+
+
+
+
+
+
+
+    /**
+     * Destroy a collision object from this universe
+     *
+     * @param  {Number} index  The index position of the object being removed
+     */
+    annihilate(index) {
+        this.objects.splice(index, 1);
+    }
+
+
+
+
+
+
+
+
+    /**
+     * Calculate the velocity of the exploded particles
+     *
+     * @param  {CollisionObject} collisionObject The particle to explode
+     * @param  {Number}          radius          The radius of the particle
+     * @param  {Number}          explosionFactor The energy involved in the
+     *                                           explosion
+     *
+     * @return {Object}                          The list of velocity of the
+     *                                           particles created after the
+     *                                           explosion
+     */
+    calculateExplosionVelocity(collisionObject, radius, explosionFactor) {
+
+        // The angle of projection of the first exploded particle
+        const angle= (Math.PI/2) + collisionObject.getAngle();
+
+        // Coordinates
+        const x= -Math.cos(angle)*explosionFactor/radius[0];
+        const y= -Math.sin(angle)*explosionFactor/radius[0];
+
+        return [
+            { x:  x, y:  y },
+            { x: -x, y: -y }
+        ];
+    }
+
+
+
+
+
+
+
+
+    /**
+     * Explodes a collision object
+     *
+     * @param  {Number} index           The index position of the element to
+     *                                  explode
+     * @param  {List}   parts           Ratio to explode the particles
+     *                                  Eg - [ 3, 2, 1 ] = Ratio 3:2:1
+     * @param  {Number} explosionFactor The energy involved in the explosion
+     */
+    explode(index, parts, explosionFactor) {
+
+        // Only two partitions for now
+        if(parts.length != 2) return;
+
+        // The object exploding
+        const object= this.objects[index];
+
+        // The sum of the partitions
+        const sum= parts.reduce((total, val) => total + val, 0);
+
+        // The list of radius of particles(the partitions)
+        const radius=
+            parts.map((val)=>
+                object.getDimenFromArea(object.getArea()*val/sum));
+
+        // The velocity of the new particles
+        const startVelocity=
+            this.calculateExplosionVelocity(object, radius, explosionFactor);
+
+        // The inital position constants
+        const positionConst= {
+            x: object.size*Math.cos(90 + object.getAngle()),
+            y: object.size*Math.sin(90 + object.getAngle())
+        };
+
+        // Get the position of the i-th partition
+        const getStartPosition=
+            (i)=> {
+                return {
+                    x: Math.pow(-1, i + 1)*positionConst.x + object.position.x,
+                    y: Math.pow(-1, i + 1)*positionConst.y + object.position.y
+                }
+            };
+
+        // Create all the partitions and introduce them to this universe
+        this.createNObjects(radius.length,
+            (i)=> ({
+                size: radius[i],
+                name: 'O-wow',
+                startPosition: getStartPosition(i),
+                startVelocity: {
+                    x: startVelocity[i].x + object.velocity.x,
+                    y: startVelocity[i].y + object.velocity.y,
+                },
+            })
+        );
+
+        // Destroy the initial particle from existence
+        this.annihilate(index);
     }
 }
